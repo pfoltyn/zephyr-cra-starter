@@ -1,0 +1,57 @@
+# hardware.yaml: the hardware/firmware contract for this product.
+#
+# Until a schematic exists this file is the source of truth. Edit it, then run
+#   west hwsync generate
+# to regenerate the board pinctrl/devicetree, the Renode twin and hardware.lock.yaml.
+# CI runs `west hwsync check` and fails if anything generated is out of date.
+#
+# Pins here deliberately match the nRF52840 DK where possible, so the same
+# firmware also runs on a DK while the custom PCB is being designed.
+schema: 1
+
+board:
+  name: twin_sensor
+  vendor: boardtwin
+  full_name: Twin Sensor Node
+  revision: A
+  soc: nrf52840_qiaa
+
+console: uart0
+
+buses:
+  uart0:
+    tx: P0.06
+    rx: P0.08
+    baudrate: 115200
+  i2c0:
+    sda: P0.26
+    scl: P0.27
+    speed: fast              # standard | fast | fast_plus
+
+devices:
+  env:
+    block: bosch_bme280
+    bus: i2c0
+    address: 0x76
+  accel:
+    block: st_lis2dw12
+    bus: i2c0
+    address: 0x19
+    signals:
+      int1: P1.10
+
+leds:
+  status:
+    pin: P0.13
+    active: low
+
+buttons:
+  user:
+    pin: P0.11
+    active: low
+    pull: up
+
+# Pins kept free on purpose (test points, future blocks). hwsync will refuse to use them.
+reserved:
+  P0.03: "battery voltage divider (AIN1): planned block, not simulated yet"
+  P1.15: "test point / spare"

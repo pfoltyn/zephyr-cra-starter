@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+
+menu "Twin Sensor application"
+
+config APP_BLE
+	bool "Advertise readings over Bluetooth LE (Environmental Sensing Service)"
+	default y
+	select BT
+	select BT_PERIPHERAL
+
+config APP_SAMPLE_INTERVAL_MS
+	int "Default sampling interval (ms); overridable at runtime via settings"
+	default 2000
+	range 100 3600000
+
+module = APP
+module-str = app
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+source "Kconfig.zephyr"

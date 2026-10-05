@@ -1,0 +1,82 @@
+# Release: build with the PRODUCTION signing key, run the twin tests against the
+# exact release images, attach images + SBOM + checksums to a GitHub release.
+#
+# Required repository secret:
+#   MCUBOOT_SIGNING_KEY  PEM private key (ECDSA P-256). Generate once with
+#                        `imgtool keygen -k key.pem -t ecdsa-p256` on an offline
+#                        machine; keep the backup offline. See docs/cra/README.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  RENODE_URL: https://builds.renode.io/renode-1.17.0+20261002git0e9eea194.linux-portable.tar.gz
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: zephyr-cra-starter
+
+      - name: Tag matches app/VERSION
+        run: |
+          eval "$(sed -n 's/^\(VERSION_MAJOR\|VERSION_MINOR\|PATCHLEVEL\) = \(.*\)/\1=\2/p' zephyr-cra-starter/app/VERSION)"
+          expected="v${VERSION_MAJOR}.${VERSION_MINOR}.${PATCHLEVEL}"
+          test "${GITHUB_REF_NAME}" = "$expected" || { echo "tag ${GITHUB_REF_NAME} != app/VERSION ($expected)"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: zephyr-cra-starter
+          toolchains: arm-zephyr-eabi
+          enable-ccache: false
+
+      - run: pip3 install -r bootloader/mcuboot/scripts/requirements.txt
+
+      - name: Build with production key
+        env:
+          MCUBOOT_SIGNING_KEY: ${{ secrets.MCUBOOT_SIGNING_KEY }}
+        run: |
+          test -n "$MCUBOOT_SIGNING_KEY" || { echo "MCUBOOT_SIGNING_KEY secret not set"; exit 1; }
+          umask 077
+          key="$RUNNER_TEMP/signing-key.pem"
+          printf '%s\n' "$MCUBOOT_SIGNING_KEY" > "$key"
+          zephyr-cra-starter/scripts/build.sh build -- "-DSB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$key\""
+          rm -f "$key"
+
+      - name: Install Renode
+        run: |
+          mkdir -p /opt/renode
+          curl -sSL "$RENODE_URL" | tar xz --strip-components=1 -C /opt/renode
+          pip3 install -r /opt/renode/tests/requirements.txt
+          echo "/opt/renode" >> "$GITHUB_PATH"
+
+      - name: Twin tests on the release images
+        run: zephyr-cra-starter/scripts/run_twin_tests.sh build
+
+      - name: Package
+        run: |
+          out="dist/twin_sensor-${GITHUB_REF_NAME}"
+          mkdir -p "$out"
+          cp build/merged.hex "$out/factory-merged.hex"
+          cp build/app/zephyr/zephyr.signed.bin "$out/update-signed.bin"
+          tar czf "$out/sbom-spdx.tar.gz" -C build sbom
+          (cd "$out" && sha256sum * > SHA256SUMS)
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/twin_sensor-"$GITHUB_REF_NAME"/* \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

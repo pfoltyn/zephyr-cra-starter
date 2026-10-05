@@ -1,0 +1,6 @@
+name: zephyr-cra-starter
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    board_root: .

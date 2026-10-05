@@ -1,0 +1,6 @@
+west-commands:
+  - file: scripts/west_hwsync.py
+    commands:
+      - name: hwsync
+        class: HwSync
+        help: generate/check board files and twin from hardware.yaml

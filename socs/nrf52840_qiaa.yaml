@@ -1,0 +1,59 @@
+# SoC/package description used by scripts/hwsync.py to validate hardware.yaml.
+# Source: nRF52840 Product Specification (pin assignments for aQFN73,
+# peripheral instantiation / shared IDs).
+soc: nrf52840
+package: qiaa            # aQFN73: all of P0.00-P0.31 and P1.00-P1.15 are bonded out
+dtsi: nordic/nrf52840_qiaa.dtsi
+renode_platform: platforms/cpus/nrf52840.repl
+# Appended to the generated twin platform: erased flash reads 0xFF like real NOR flash.
+renode_overrides: |
+  flash:
+      init:
+          FillWithRepeatingData [0xFF]
+
+ports:
+  0: 32
+  1: 16
+
+# Pins with a fixed or default function. hwsync refuses to assign them unless
+# hardware.yaml lists them under `release:` with the stated reason.
+special_pins:
+  P0.00: {function: XL1, note: "32.768 kHz crystal (needed for low-power BLE timing)"}
+  P0.01: {function: XL2, note: "32.768 kHz crystal"}
+  P0.09: {function: NFC1, note: "NFC antenna; usable as GPIO only with UICR nfct-pins-as-gpios", release_dt: "&uicr { nfct-pins-as-gpios; };"}
+  P0.10: {function: NFC2, note: "NFC antenna; usable as GPIO only with UICR nfct-pins-as-gpios", release_dt: "&uicr { nfct-pins-as-gpios; };"}
+  P0.18: {function: nRESET, note: "pin reset (UICR gpio-as-nreset)"}
+
+analog_pins:
+  P0.02: AIN0
+  P0.03: AIN1
+  P0.04: AIN2
+  P0.05: AIN3
+  P0.28: AIN4
+  P0.29: AIN5
+  P0.30: AIN6
+  P0.31: AIN7
+
+# Serial peripheral instances. (TWIM_* pinctrl functions are used for TWI too.)
+# `shares` = same instance ID, cannot be used together.
+# `renode` = name of the instance in the Renode platform (absent = not simulated).
+peripherals:
+  uart0: {type: uart, renode: uart0, psel: {tx: UART_TX, rx: UART_RX, rts: UART_RTS, cts: UART_CTS}}
+  uart1: {type: uart, renode: uart1, psel: {tx: UART_TX, rx: UART_RX, rts: UART_RTS, cts: UART_CTS}}
+  i2c0:  {type: i2c, shares: [spi0], renode: twi0, dt_compatible: "nordic,nrf-twi", psel: {sda: TWIM_SDA, scl: TWIM_SCL}}
+  i2c1:  {type: i2c, shares: [spi1], renode: twi1, dt_compatible: "nordic,nrf-twi", psel: {sda: TWIM_SDA, scl: TWIM_SCL}}
+  spi0:  {type: spi, shares: [i2c0], psel: {sck: SPIM_SCK, mosi: SPIM_MOSI, miso: SPIM_MISO}}
+  spi1:  {type: spi, shares: [i2c1], psel: {sck: SPIM_SCK, mosi: SPIM_MOSI, miso: SPIM_MISO}}
+  spi2:  {type: spi, renode: spi2, psel: {sck: SPIM_SCK, mosi: SPIM_MOSI, miso: SPIM_MISO}}
+  spi3:  {type: spi, psel: {sck: SPIM_SCK, mosi: SPIM_MOSI, miso: SPIM_MISO}}
+
+# Choices made so the same firmware runs on the twin and on hardware.
+# Listed in docs/hardware/pinout.md; revisit when the twin's models improve.
+twin_compromises:
+  - "I2C uses the legacy TWI peripheral (nordic,nrf-twi) instead of TWIM: Renode models TWI only. Functionally identical; TWIM would use EasyDMA and fewer interrupts. Switch by deleting dt_compatible once a TWIM model exists."
+  - "The nRF52840 flash controller (NVMC) is a minimal Python model (renode/nrf52840_nvmc.py): page erase and READY only."
+  - "SAADC (battery measurement) is not modelled."
+
+gpio_ports:
+  0: {dt: gpio0, renode: gpio0}
+  1: {dt: gpio1, renode: gpio1}

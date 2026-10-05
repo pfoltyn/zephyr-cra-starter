@@ -1,0 +1,9 @@
+id: gpio_led
+title: Indicator LED driven by a GPIO (sink or source)
+kind: led
+renode:
+  model: Miscellaneous.LED
+provenance:
+  reference_circuit: "LED + series resistor; active-low (sink); check GPIO drive strength vs LED current in the SoC datasheet"
+validated_by:
+  - tests/twin/boot.robot::Status LED Blinks

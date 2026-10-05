@@ -1,0 +1,26 @@
+id: st_lis2dw12
+title: ST LIS2DW12 3-axis low-power accelerometer (I2C)
+kind: i2c-device
+addresses: [0x18, 0x19]          # SA0 strap: GND -> 0x18, VDD -> 0x19
+dt:
+  compatible: st,lis2dw12
+  node_name: lis2dw12
+signals:
+  int1:
+    direction: in
+    dt_property: irq-gpios
+    dt_flags: GPIO_ACTIVE_HIGH
+west_modules: [hal_st]   # STMicro sensor driver library (stmemsc)
+kconfig:
+  - CONFIG_SENSOR=y
+renode:
+  model: Sensors.LIS2DW12
+alternates:
+  - part: ST LIS2DH12 (pin compatible, different driver)
+provenance:
+  datasheet: https://www.st.com/en/mems-and-sensors/lis2dw12.html
+  reference_circuit: "Datasheet DS11957, section 'Application hints': 100 nF + 10 uF on Vdd, CS tied to Vdd_IO for I2C"
+  known_issues:
+    - "INT1 is push-pull active high by default; do not share the line"
+validated_by:
+  - tests/twin/sensors.robot::Accelerometer Reports Simulated Acceleration

@@ -1,0 +1,30 @@
+# West manifest for the starter. This repo is the manifest repository
+# ("T2 topology"): `west init -l` here, then `west update`.
+manifest:
+  self:
+    path: zephyr-cra-starter
+    west-commands: scripts/west-commands.yml
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v4.4.2
+      import:
+        # Only fetch the modules this product actually uses. Add to this list
+        # when a new block needs a module (and record it in the SBOM review).
+        name-allowlist:
+          - cmsis
+          - cmsis_6
+          - hal_nordic
+          - hal_st
+          - mbedtls
+          - mbedtls-3.6
+          - tf-psa-crypto
+          - mcuboot
+          - picolibc
+          - segger
+          - zcbor

@@ -1,0 +1,11 @@
+board:
+  name: twin_sensor
+  full_name: Twin Sensor Node
+  vendor: boardtwin
+  revision:
+    format: letter
+    default: "A"
+    revisions:
+      - name: "A"
+  socs:
+    - name: nrf52840

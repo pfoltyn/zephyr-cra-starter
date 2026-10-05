@@ -1,0 +1,21 @@
+id: bosch_bme280
+title: Bosch BME280 temperature / humidity / pressure sensor (I2C)
+kind: i2c-device
+addresses: [0x76, 0x77]          # SDO strap: GND -> 0x76, VDDIO -> 0x77
+max_bus_speed: fast_plus          # up to 3.4 MHz HS; we never exceed fast mode plus
+dt:
+  compatible: bosch,bme280
+  node_name: bme280
+kconfig:
+  - CONFIG_SENSOR=y
+renode:
+  model: I2C.BME280
+alternates:
+  - part: Bosch BME680 (adds gas; different driver, not simulated)
+provenance:
+  datasheet: https://www.bosch-sensortec.com/products/environmental-sensors/humidity-sensors-bme280/
+  reference_circuit: "Datasheet BST-BME280-DS002, section 'Connection diagram I2C': 100 nF on VDD and VDDIO, CSB tied to VDDIO for I2C"
+  known_issues:
+    - "Self-heating: keep forced mode with low duty cycle for accurate ambient temperature"
+validated_by:
+  - tests/twin/sensors.robot::Environment Sensor Reports Simulated Climate

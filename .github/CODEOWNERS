@@ -1,0 +1,9 @@
+# Template: replace the team names with yours.
+# Hardware owns the pin plan; firmware owns how it's expressed in devicetree.
+/hardware.yaml          @your-org/hardware
+/hardware.lock.yaml     @your-org/hardware
+/blocks/                @your-org/hardware @your-org/firmware
+/boards/                @your-org/firmware
+/app/                   @your-org/firmware
+/renode/                @your-org/firmware
+/.github/workflows/     @your-org/firmware

@@ -1,0 +1,38 @@
+:name: Twin Sensor Node
+:description: Digital twin of boardtwin/twin_sensor: MCUboot + signed application.
+:
+: Usage (from the west workspace root):
+:   renode zephyr-cra-starter/renode/twin_sensor.resc
+: Override images with: $bootloader=@path/to/mcuboot.elf $app=@path/to/app.signed.hex
+
+$name?="twin_sensor"
+$bootloader?=@build/mcuboot/zephyr/zephyr.elf
+$app?=@build/app/zephyr/zephyr.signed.hex
+
+using sysbus
+mach create $name
+machine LoadPlatformDescription $ORIGIN/twin_sensor.repl
+# Flash controller model missing from Renode's nRF52840 platform.
+machine PyDevFromFile $ORIGIN/nrf52840_nvmc.py 0x4001E000 0x1000 True "nvmc"
+# Factory/user configuration values that real silicon provides.
+sysbus Tag <0x10000010, 0x10000013> "FICR.CODEPAGESIZE" 0x1000
+sysbus Tag <0x10000014, 0x10000017> "FICR.CODESIZE" 0x100
+sysbus Tag <0x10001200, 0x10001203> "UICR.PSELRESET[0]" 0x12
+sysbus Tag <0x10001204, 0x10001207> "UICR.PSELRESET[1]" 0x12
+
+# Sensible defaults for the simulated environment (change at runtime, e.g.
+# `sysbus.twi0.env Temperature 30`).
+twi0.env Temperature 21.5
+twi0.env Humidity 45
+twi0.env Pressure 1013
+twi0.accel DefaultAccelerationZ 1
+twi0.accel AccelerationZ 1
+
+macro reset
+"""
+    sysbus LoadELF $bootloader
+    sysbus LoadHEX $app
+"""
+runMacro $reset
+
+showAnalyzer uart0

@@ -1,0 +1,33 @@
+/*
+ * Twin Sensor Node, revision A.
+ *
+ * Hand-written part of the board: SoC, flash layout, regulators.
+ * Pins and attached devices come from hardware.yaml via the two generated
+ * includes below; change them there, not here.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <nordic/nrf52840_qiaa.dtsi>
+#include <nordic/nrf52840_partition.dtsi>
+#include "twin_sensor-pinctrl.dtsi"
+#include "twin_sensor-hw.dtsi"
+
+/ {
+	model = "Twin Sensor Node rev A";
+	compatible = "boardtwin,twin-sensor";
+
+	aliases {
+		watchdog0 = &wdt0;
+	};
+};
+
+/* DC/DC needs the external inductor from the nRF52840 reference circuit. */
+&reg1 {
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&uicr {
+	gpio-as-nreset;
+};

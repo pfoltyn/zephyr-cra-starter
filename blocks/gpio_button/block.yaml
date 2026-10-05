@@ -1,0 +1,9 @@
+id: gpio_button
+title: Push button to ground with internal pull-up
+kind: button
+renode:
+  model: Miscellaneous.Button
+provenance:
+  reference_circuit: "Momentary switch to GND, internal pull-up enabled, optional 100 nF debounce cap"
+validated_by:
+  - tests/twin/boot.robot::Button Press Is Reported

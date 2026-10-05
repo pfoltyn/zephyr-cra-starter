@@ -1,0 +1,79 @@
+# CI: hardware contract check, firmware build, SBOM, and the Renode twin tests.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # Pinned Renode build. 1.17.0 (2026-09-06) predates the nRF52840 TWI SUSPEND
+  # fix (renode-infrastructure, 2026-09-23); move to the next release once tagged.
+  RENODE_URL: https://builds.renode.io/renode-1.17.0+20261002git0e9eea194.linux-portable.tar.gz
+
+jobs:
+  hardware-contract:
+    name: hardware.yaml check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml pytest
+      - name: Generated files are up to date (west hwsync check)
+        run: python3 scripts/hwsync.py check
+      - name: hwsync unit tests
+        run: pytest -q tests/hwsync
+
+  build-and-twin:
+    name: Build, SBOM and twin tests
+    needs: hardware-contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: zephyr-cra-starter
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Zephyr workspace and SDK
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: zephyr-cra-starter
+          toolchains: arm-zephyr-eabi
+
+      - name: MCUboot image tooling
+        run: pip3 install -r bootloader/mcuboot/scripts/requirements.txt
+
+      - name: Build (hwsync check, sysbuild, verify-build, SBOM)
+        run: zephyr-cra-starter/scripts/build.sh build
+
+      - name: Install Renode
+        run: |
+          mkdir -p /opt/renode
+          curl -sSL "$RENODE_URL" | tar xz --strip-components=1 -C /opt/renode
+          pip3 install -r /opt/renode/tests/requirements.txt
+          echo "/opt/renode" >> "$GITHUB_PATH"
+
+      - name: Twin tests (Renode)
+        run: zephyr-cra-starter/scripts/run_twin_tests.sh build
+
+      - name: Upload firmware, SBOM and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twin_sensor-${{ github.sha }}
+          path: |
+            build/merged.hex
+            build/app/zephyr/zephyr.signed.bin
+            build/app/zephyr/zephyr.signed.hex
+            build/mcuboot/zephyr/zephyr.hex
+            build/sbom/
+            build/twin-results/
+          if-no-files-found: warn

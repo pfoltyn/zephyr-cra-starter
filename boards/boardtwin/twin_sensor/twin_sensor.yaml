@@ -1,0 +1,15 @@
+identifier: twin_sensor/nrf52840
+name: Twin Sensor Node
+vendor: boardtwin
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+ram: 256
+flash: 1024
+supported:
+  - gpio
+  - i2c
+  - watchdog
+testing:
+  default: true
